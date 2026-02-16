@@ -1,0 +1,8 @@
+{
+  "name": "Copy of TaiHub2323",
+  "description": "A sophisticated digital dictionary for Assamese, English, Tai Khamyang, and other languages, featuring administrative controls and AI-powered heritage search.",
+  "requestFramePermissions": [
+    "microphone",
+    "camera"
+  ]
+}
