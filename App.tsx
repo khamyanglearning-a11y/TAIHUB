@@ -53,6 +53,7 @@ const App: React.FC = () => {
   const [practiceWord, setPracticeWord] = useState<Word | null>(null);
   const [editingWord, setEditingWord] = useState<Word | undefined>(undefined);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isSettingUpDev, setIsSettingUpDev] = useState(false);
 
   const [isDarkMode, setIsDarkMode] = useState(() => {
     return localStorage.getItem('taihub_theme') === 'dark';
@@ -143,6 +144,12 @@ const App: React.FC = () => {
       return;
     }
 
+    if (!devConfig && loginIntent === 'developer') {
+      setIsSettingUpDev(true);
+      setIsLoggingIn(false);
+      return;
+    }
+
     // Staff login logic
     const staff = admins.find(a => a.phone.endsWith(cleanPhone.slice(-10)));
     if (staff && staff.password === pass) { 
@@ -158,6 +165,10 @@ const App: React.FC = () => {
     try {
       await db.devAuth.setup(phone, pass, name);
       setDevConfig({ phone, password: pass, name });
+      setIsSettingUpDev(false);
+      // Auto login after setup
+      setCurrentUser({ id: phone, username: phone, name: name, role: 'owner', permissions: { dictionary: true, library: true, gallery: true, songs: true, videos: true, exams: true } });
+      setActiveTab('dashboard');
     } catch (e) {
       alert("Failed to setup Developer credentials.");
     }
@@ -293,10 +304,6 @@ const App: React.FC = () => {
     return <div className="min-h-screen bg-gray-50 flex items-center justify-center"><div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div></div>;
   }
 
-  if (!devConfig) {
-    return <DeveloperRegisterPage onSetup={handleDevSetup} />;
-  }
-
   const canEditDictionary = currentUser?.role === 'owner' || !!currentUser?.permissions?.dictionary;
 
   return (
@@ -307,7 +314,7 @@ const App: React.FC = () => {
 
       <main className="max-w-6xl mx-auto px-4 mt-10">
         {activeTab === 'dashboard' && currentUser && (
-          <AdminPanel user={currentUser} admins={admins} words={words} books={books} photos={gallery} songs={songs} videos={videos} registeredUsers={registeredUsers} stats={{ words: words.length, books: books.length, photos: gallery.length, songs: songs.length, videos: videos.length }} onSaveAdmin={handleSaveAdmin} onRemoveAdmin={handleRemoveAdmin} onAddWord={() => setIsWordModalOpen(true)} onDeleteWord={(id) => { db.words.delete(id); setWords(prev => prev.filter(w => w.id !== id)); }} onAddBook={() => setIsBookModalOpen(true)} onDeleteBook={(id) => { db.books.delete(id); setBooks(prev => prev.filter(b => b.id !== id)); }} onAddPhoto={() => setIsGalleryModalOpen(true)} onDeletePhoto={(id) => { db.gallery.delete(id); setGallery(prev => prev.filter(g => g.id !== id)); }} onAddSong={() => setIsSongModalOpen(true)} onDeleteSong={(id) => { db.songs.delete(id); setSongs(prev => prev.filter(s => s.id !== id)); }} onAddVideo={() => setIsVideoModalOpen(true)} onDeleteVideo={(id) => { db.videos.delete(id); setVideos(prev => prev.filter(v => v.id !== id)); }} onUpdateDevCredentials={handleUpdateDevSecurity} currentDevPhone={devConfig.phone} />
+          <AdminPanel user={currentUser} admins={admins} words={words} books={books} photos={gallery} songs={songs} videos={videos} registeredUsers={registeredUsers} stats={{ words: words.length, books: books.length, photos: gallery.length, songs: songs.length, videos: videos.length }} onSaveAdmin={handleSaveAdmin} onRemoveAdmin={handleRemoveAdmin} onAddWord={() => setIsWordModalOpen(true)} onDeleteWord={(id) => { db.words.delete(id); setWords(prev => prev.filter(w => w.id !== id)); }} onAddBook={() => setIsBookModalOpen(true)} onDeleteBook={(id) => { db.books.delete(id); setBooks(prev => prev.filter(b => b.id !== id)); }} onAddPhoto={() => setIsGalleryModalOpen(true)} onDeletePhoto={(id) => { db.gallery.delete(id); setGallery(prev => prev.filter(g => g.id !== id)); }} onAddSong={() => setIsSongModalOpen(true)} onDeleteSong={(id) => { db.songs.delete(id); setSongs(prev => prev.filter(s => s.id !== id)); }} onAddVideo={() => setIsVideoModalOpen(true)} onDeleteVideo={(id) => { db.videos.delete(id); setVideos(prev => prev.filter(v => v.id !== id)); }} onUpdateDevCredentials={handleUpdateDevSecurity} currentDevPhone={devConfig?.phone || ''} />
         )}
 
         {activeTab === 'dictionary' && (
@@ -325,6 +332,7 @@ const App: React.FC = () => {
       </main>
 
       {isLogoutModalOpen && <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-300"><div className="bg-white dark:bg-gray-900 rounded-[2.5rem] w-full max-sm shadow-2xl p-10 text-center"><h2 className="text-3xl font-black mb-10 dark:text-white">Sign Out?</h2><div className="space-y-3"><button onClick={handleLogout} className="w-full py-5 bg-red-600 text-white rounded-2xl font-black">Yes, Logout</button><button onClick={() => setIsLogoutModalOpen(false)} className="w-full py-4 bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 rounded-2xl font-black">Cancel</button></div></div></div>}
+      {isSettingUpDev && <div className="fixed inset-0 z-[300] bg-white"><div className="absolute top-4 right-4 z-10"><button onClick={() => setIsSettingUpDev(false)} className="p-2 bg-gray-100 rounded-full">Close</button></div><DeveloperRegisterPage onSetup={handleDevSetup} /></div>}
       {isWordModalOpen && <WordFormModal onClose={() => { setIsWordModalOpen(false); setEditingWord(undefined); }} onSubmit={handleWordSubmit} canDelete={currentUser?.role === 'owner' || false} existingWords={words} isOnline={isOnline} initialData={editingWord} />}
       {isBookModalOpen && <BookFormModal onClose={() => setIsBookModalOpen(false)} onSubmit={handleBookSubmit} />}
       {isGalleryModalOpen && <GalleryFormModal onClose={() => setIsGalleryModalOpen(false)} onSubmit={handleGallerySubmit} />}

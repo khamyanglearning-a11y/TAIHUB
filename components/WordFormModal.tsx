@@ -39,18 +39,32 @@ const WordFormModal: React.FC<WordFormModalProps> = ({ onClose, onSubmit, onDele
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  const handleAISuggest = async () => {
+  const handleAISuggest = async (includeImage: boolean = false) => {
     if (!isOnline) return alert('AI features require internet connection.');
     const wordToLookup = formData.english || formData.assamese || formData.taiKhamyang;
     if (!wordToLookup) return alert('Enter a word first.');
     
     setIsLoadingAI(true);
     const suggestions = await getAIWordSuggestions(wordToLookup, 'unknown');
-    setIsLoadingAI(false);
-
+    
     if (suggestions) {
       setFormData(prev => ({ ...prev, ...suggestions }));
+      
+      if (includeImage) {
+        setIsGeneratingImg(true);
+        const b64Image = await generateWordImage({
+          english: suggestions.english || formData.english || '',
+          assamese: suggestions.assamese || formData.assamese || '',
+          tai: suggestions.taiKhamyang || formData.taiKhamyang || '',
+          category: formData.category
+        });
+        if (b64Image) {
+          setFormData(prev => ({ ...prev, imageUrl: b64Image }));
+        }
+        setIsGeneratingImg(false);
+      }
     }
+    setIsLoadingAI(false);
   };
 
   const handleGenerateImg = async () => {
@@ -175,13 +189,24 @@ const WordFormModal: React.FC<WordFormModalProps> = ({ onClose, onSubmit, onDele
                   className="flex-1 px-8 py-5 bg-gray-50 dark:bg-gray-800 dark:text-white border-2 border-transparent rounded-[2rem] focus:border-blue-500 focus:bg-white dark:focus:bg-gray-800 outline-none transition-all font-black text-xl shadow-inner"
                   placeholder="e.g. Traditional House"
                 />
-                <button 
-                  onClick={handleAISuggest}
-                  disabled={isLoadingAI || !isOnline}
-                  className={`px-8 py-4 sm:py-0 rounded-[2rem] font-black text-xs uppercase tracking-widest transition-all shadow-xl active:scale-95 ${isLoadingAI ? 'bg-blue-100 text-blue-400' : 'bg-blue-600 text-white shadow-blue-200'}`}
-                >
-                  {isLoadingAI ? 'AI Working...' : 'AI Smart Fill'}
-                </button>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => handleAISuggest(false)}
+                    disabled={isLoadingAI || !isOnline}
+                    className={`px-6 py-4 sm:py-0 rounded-[2rem] font-black text-[10px] uppercase tracking-widest transition-all shadow-xl active:scale-95 ${isLoadingAI ? 'bg-blue-100 text-blue-400' : 'bg-blue-600 text-white shadow-blue-200'}`}
+                    title="Fill translations and examples"
+                  >
+                    {isLoadingAI ? '...' : 'AI Text'}
+                  </button>
+                  <button 
+                    onClick={() => handleAISuggest(true)}
+                    disabled={isLoadingAI || isGeneratingImg || !isOnline}
+                    className={`px-6 py-4 sm:py-0 rounded-[2rem] font-black text-[10px] uppercase tracking-widest transition-all shadow-xl active:scale-95 ${isLoadingAI || isGeneratingImg ? 'bg-indigo-100 text-indigo-400' : 'bg-indigo-600 text-white shadow-indigo-200'}`}
+                    title="Fill everything including image"
+                  >
+                    {isLoadingAI || isGeneratingImg ? '...' : 'AI Magic'}
+                  </button>
+                </div>
               </div>
             </div>
 
